@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: token
+      POSTGRES_PASSWORD: token
+      POSTGRES_DB: tokendb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U token -d tokendb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://token:token@db:5432/tokendb"
+      AUTH_SECRET: "change-me-in-production-use-openssl-rand-base64-32"
+      NEXTAUTH_SECRET: "change-me-in-production-use-openssl-rand-base64-32"
+      NEXTAUTH_URL: "http://localhost:3000"
+      AUTH_TRUST_HOST: "true"
+      # Used by docker-entrypoint.sh for pg_isready and psql
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: token
+      DB_PASSWORD: token
+      DB_NAME: tokendb
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

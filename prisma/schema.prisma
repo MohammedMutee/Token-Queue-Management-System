@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  RECEPTION
+  CABIN_OPERATOR
+}
+
+enum TokenState {
+  ISSUED
+  WAITING
+  CALLED
+  IN_PROGRESS
+  APPROVED
+  HOLD
+  DEACTIVATED
+  NO_SHOW
+  COMPLETED
+  CANCELLED
+}
+
+enum QueueSort {
+  TOKEN_ORDER
+  APPROVAL_TIME
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String
+  role      Role
+  isActive  Boolean  @default(true)
+  cabins    Cabin[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Level {
+  id                Int       @id @default(autoincrement())
+  name              String
+  order             Int       @unique
+  isActive          Boolean   @default(true)
+  queueSortStrategy QueueSort @default(APPROVAL_TIME)
+  cabins            Cabin[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Cabin {
+  id         Int          @id @default(autoincrement())
+  name       String
+  levelId    Int
+  level      Level        @relation(fields: [levelId], references: [id])
+  isActive   Boolean      @default(true)
+  operatorId Int?
+  operator   User?        @relation(fields: [operatorId], references: [id])
+  events     TokenEvent[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+}
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @unique @db.Date
+  lastTokenNo Int      @default(0)
+  isActive    Boolean  @default(true)
+  tokens      Token[]
+  createdAt   DateTime @default(now())
+}
+
+model Token {
+  id             Int        @id @default(autoincrement())
+  tokenNumber    Int
+  displayNumber  String
+  sessionId      Int
+  session        Session    @relation(fields: [sessionId], references: [id])
+  currentState   TokenState @default(ISSUED)
+  currentLevel   Int        @default(1)
+  currentCabinId Int?
+  priority       Int        @default(0)
+  noShowCount    Int        @default(0)
+  metadata       Json?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  events         TokenEvent[]
+
+  @@unique([sessionId, tokenNumber])
+  @@index([currentState, currentLevel])
+  @@index([sessionId, currentState])
+}
+
+model TokenEvent {
+  id        Int         @id @default(autoincrement())
+  tokenId   Int
+  token     Token       @relation(fields: [tokenId], references: [id])
+  fromState TokenState?
+  toState   TokenState
+  level     Int
+  cabinId   Int?
+  cabin     Cabin?      @relation(fields: [cabinId], references: [id])
+  remarks   String?
+  createdBy Int
+  createdAt DateTime    @default(now())
+
+  @@index([tokenId, createdAt])
+}

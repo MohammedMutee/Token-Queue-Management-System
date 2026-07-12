@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Token Queue Management System
 
-## Getting Started
+A real-time token queue management system for organizations that process visitors through numbered tokens -- government offices, hospitals, service centers, etc.
 
-First, run the development server:
+## Features
+
+- **Reception Desk** -- Issue numbered tokens, thermal receipt printing (via QZ Tray)
+- **Cabin Operator** -- Call tokens, process visitors, approve/hold/skip
+- **TV Display** -- Full-screen queue display with voice announcements
+- **Admin Dashboard** -- Manage users, cabins, levels, sessions, and analytics
+- **Real-time Updates** -- Socket.IO pushes changes to all connected clients instantly
+- **Multi-level Processing** -- Configurable levels (e.g. Document Verification -> Final Approval)
+- **Thermal Printing** -- Network (raw TCP), USB, or browser print via QZ Tray
+
+## Tech Stack
+
+- **Next.js 16** (App Router) + **React 19**
+- **PostgreSQL 16** + **Prisma 6**
+- **Socket.IO 4** (WebSocket, same port as HTTP)
+- **NextAuth v5** (Credentials + JWT)
+- **Tailwind CSS v4**
+
+## Quick Start (Docker)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url> && cd Token-System
+docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. Default login: `admin` / `admin123`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Manual Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# 1. Start PostgreSQL (via Docker or install natively)
+docker compose up db -d
 
-## Learn More
+# 2. Install and run
+cp .env.example .env
+npm install
+npx prisma db push
+npx prisma db seed
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Default Credentials
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | admin | admin123 |
+| Reception | reception | reception123 |
+| Cabin L1 | cabin_l1_1 | cabin1 |
+| Cabin L2 | cabin_l2_1 | cabin11 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See `prisma/seed.ts` for the full list of 22 seeded users.
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+server.ts              Custom HTTP server (Next.js + Socket.IO)
+prisma/schema.prisma   Database schema
+prisma/seed.ts         Seed data (users, levels, cabins)
+src/app/reception/     Token issuance interface
+src/app/cabin/         Cabin operator interface
+src/app/display/       TV display (public, no auth)
+src/app/admin/         Admin dashboard
+src/app/api/           API routes
+src/lib/               Shared utilities (auth, db, queue, socket, printing)
+src/middleware.ts      Route protection (role-based)
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+Private
