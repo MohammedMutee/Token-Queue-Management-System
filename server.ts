@@ -14,8 +14,6 @@ app.prepare().then(() => {
   const upgradeHandler = app.getUpgradeHandler();
 
   const engine = new EngineServer({
-    path: "/api/socketio",
-    addTrailingSlash: false,
     cors: { origin: "*" },
   });
 
