@@ -34,11 +34,9 @@ RUN apk add --no-cache postgresql-client
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 
+# tsx (runs server.ts + seed.ts at runtime) and dotenv (used by seed.ts) are
+# declared as production dependencies, so they are included here.
 RUN npm ci --omit=dev
-
-# tsx (runs server.ts + seed.ts at runtime) and dotenv (used by seed.ts)
-# are devDependencies but required in the production image
-RUN npm install --no-save tsx dotenv
 
 # Generate Prisma client against production node_modules
 RUN npx prisma generate
