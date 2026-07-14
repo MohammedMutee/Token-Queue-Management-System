@@ -91,7 +91,7 @@ interface SessionsData {
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "users", label: "Users" },
-  { key: "levels", label: "Levels & Cabins" },
+  { key: "levels", label: "Levels & Counters" },
   { key: "sessions", label: "Sessions" },
   { key: "analytics", label: "Analytics" },
 ];
@@ -216,7 +216,7 @@ function OverviewTab() {
         </div>
       </div>
 
-      {/* Cabin Status Table */}
+      {/* Counter Status Table */}
       {Object.entries(cabinsByLevel).map(([level, levelCabins]) => (
         <div
           key={level}
@@ -224,14 +224,14 @@ function OverviewTab() {
         >
           <div className="px-4 py-3 border-b border-border">
             <span className="text-[11px] font-bold tracking-[0.1em] text-muted-light">
-              CABIN STATUS — {level.toUpperCase()}
+              COUNTER STATUS — {level.toUpperCase()}
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-muted-light">
-                  <th className="text-left px-4 py-2.5 font-semibold">Cabin</th>
+                  <th className="text-left px-4 py-2.5 font-semibold">Counter</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Operator</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Status</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Current Token</th>
@@ -283,7 +283,7 @@ function OverviewTab() {
                       colSpan={5}
                       className="px-4 py-6 text-center text-muted"
                     >
-                      No cabins configured
+                      No counters configured
                     </td>
                   </tr>
                 )}
@@ -295,7 +295,7 @@ function OverviewTab() {
 
       {cabins.length === 0 && (
         <div className="bg-paper-warm border border-border rounded-xl p-8 text-center text-muted">
-          No cabin data available
+          No counter data available
         </div>
       )}
     </div>
@@ -438,7 +438,7 @@ function UsersTab() {
                 <th className="text-left px-4 py-2.5 font-semibold">Name</th>
                 <th className="text-left px-4 py-2.5 font-semibold">Role</th>
                 <th className="text-left px-4 py-2.5 font-semibold">Status</th>
-                <th className="text-left px-4 py-2.5 font-semibold">Cabin</th>
+                <th className="text-left px-4 py-2.5 font-semibold">Counter</th>
                 <th className="text-right px-4 py-2.5 font-semibold">Actions</th>
               </tr>
             </thead>
@@ -817,11 +817,11 @@ function LevelsTab() {
               </div>
             </div>
 
-            {/* Cabins for this level */}
+            {/* Counters for this level */}
             <div className="bg-paper-warm border border-border rounded-xl overflow-hidden">
               <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
                 <span className="text-[11px] font-bold tracking-[0.1em] text-muted-light">
-                  CABINS — {level.name.toUpperCase()}
+                  COUNTERS — {level.name.toUpperCase()}
                 </span>
                 <button
                   onClick={() => {
@@ -830,7 +830,7 @@ function LevelsTab() {
                   }}
                   className="text-xs font-bold text-teal hover:text-teal/80 transition-colors"
                 >
-                  {addCabinLevel === level.id ? "Cancel" : "+ Add Cabin"}
+                  {addCabinLevel === level.id ? "Cancel" : "+ Add Counter"}
                 </button>
               </div>
 
@@ -838,7 +838,7 @@ function LevelsTab() {
                 <div className="px-4 py-3 border-b border-teal-border bg-teal-light/30 flex gap-2 items-center">
                   <input
                     type="text"
-                    placeholder="e.g. Cabin 11"
+                    placeholder="e.g. Counter 11"
                     value={newCabinName}
                     onChange={(e) => setNewCabinName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addCabin(level.id)}
@@ -860,7 +860,7 @@ function LevelsTab() {
                   <thead>
                     <tr className="border-b border-border text-xs text-muted-light">
                       <th className="text-left px-4 py-2.5 font-semibold">
-                        Cabin
+                        Counter
                       </th>
                       <th className="text-left px-4 py-2.5 font-semibold">
                         Operator
@@ -954,7 +954,7 @@ function LevelsTab() {
                           colSpan={4}
                           className="px-4 py-6 text-center text-muted"
                         >
-                          No cabins for this level
+                          No counters for this level
                         </td>
                       </tr>
                     )}
@@ -1271,16 +1271,16 @@ function AnalyticsTab() {
         </div>
       )}
 
-      {/* Per-Cabin Performance */}
+      {/* Per-Counter Performance */}
       <div className="bg-paper-warm border border-border rounded-xl overflow-hidden mb-5">
         <div className="px-4 py-3 border-b border-border">
-          <span className="text-[11px] font-bold tracking-[0.1em] text-muted-light">CABIN PERFORMANCE</span>
+          <span className="text-[11px] font-bold tracking-[0.1em] text-muted-light">COUNTER PERFORMANCE</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-xs text-muted-light">
-                <th className="text-left px-4 py-2.5 font-semibold">Cabin</th>
+                <th className="text-left px-4 py-2.5 font-semibold">Counter</th>
                 <th className="text-left px-4 py-2.5 font-semibold">Level</th>
                 <th className="text-right px-4 py-2.5 font-semibold">Processed</th>
                 <th className="text-right px-4 py-2.5 font-semibold">Avg Time</th>
@@ -1296,7 +1296,7 @@ function AnalyticsTab() {
                 </tr>
               ))}
               {data.perCabin.filter((c) => c.processedCount > 0).length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-muted">No cabin processing data yet</td></tr>
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-muted">No counter processing data yet</td></tr>
               )}
             </tbody>
           </table>
@@ -1355,7 +1355,7 @@ export default function AdminPage() {
               Admin Dashboard
             </div>
             <div className="text-xs text-muted">
-              Manage users, levels, cabins &amp; sessions
+              Manage users, levels, counters &amp; sessions
             </div>
           </div>
         </div>

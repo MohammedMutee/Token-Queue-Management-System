@@ -28,8 +28,8 @@ export default function Home() {
   const links = [
     { href: "/display", label: "TV DISPLAY", title: "Queue Display Screen", desc: "Full-screen view for waiting hall TV", roles: null },
     { href: "/reception", label: "RECEPTION", title: "Token Issuance Desk", desc: "Issue and reactivate tokens", roles: ["RECEPTION", "ADMIN"] },
-    { href: "/cabin", label: "CABIN OPERATOR", title: "Cabin Processing", desc: "Call, approve, and manage tokens", roles: ["CABIN_OPERATOR", "ADMIN"] },
-    { href: "/admin", label: "ADMIN", title: "Administration", desc: "Manage levels, cabins, users, sessions", roles: ["ADMIN"] },
+    { href: "/cabin", label: "COUNTER OPERATOR", title: "Counter Processing", desc: "Call, approve, and manage tokens", roles: ["CABIN_OPERATOR", "ADMIN"] },
+    { href: "/admin", label: "ADMIN", title: "Administration", desc: "Manage levels, counters, users, sessions", roles: ["ADMIN"] },
   ];
 
   const visibleLinks = links.filter((l) => !l.roles || (role && l.roles.includes(role)));

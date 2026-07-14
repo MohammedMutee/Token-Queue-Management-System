@@ -294,15 +294,15 @@ export default function CabinPage() {
       <div className="min-h-screen bg-paper flex items-center justify-center px-4">
         <div className="text-center">
           <div className="text-4xl text-muted-light mb-3">!</div>
-          <div className="text-lg font-bold text-dark mb-1">No Cabin Assigned</div>
-          <div className="text-sm text-muted mb-4">Your account is not linked to a cabin. Contact an administrator.</div>
+          <div className="text-lg font-bold text-dark mb-1">No Counter Assigned</div>
+          <div className="text-sm text-muted mb-4">Your account is not linked to a counter. Contact an administrator.</div>
           <button onClick={() => router.push("/")} className="text-sm font-bold text-teal hover:underline">Go to Home</button>
         </div>
       </div>
     );
   }
 
-  const cabinLabel = info?.cabinName ?? "Cabin";
+  const cabinLabel = info?.cabinName ?? "Counter";
   const levelLabel = info ? `Level ${info.levelOrder}` : "Level";
   const operatorName = info?.operatorName ?? "Operator";
   const token = info?.currentToken;

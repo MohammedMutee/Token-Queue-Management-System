@@ -579,7 +579,7 @@ export default function ReceptionPage() {
                             : "bg-paper-warm text-muted border-border"
                         }`}
                       >
-                        Same Cabin{searchResult.operatorName ? ` (${searchResult.operatorName})` : ""}
+                        Same Counter{searchResult.operatorName ? ` (${searchResult.operatorName})` : ""}
                       </button>
                       <button
                         onClick={() => setReactivateMode("ANY_AVAILABLE")}
@@ -649,7 +649,7 @@ export default function ReceptionPage() {
             { label: "DONE", value: summary.completed, color: "text-green" },
             { label: "HOLD", value: summary.hold, color: "text-amber" },
             { label: "NO-SHOW", value: summary.noShow, color: "text-red" },
-            { label: "CABINS", value: summary.activeCabins, color: "text-dark" },
+            { label: "COUNTERS", value: summary.activeCabins, color: "text-dark" },
           ].map((stat) => (
             <div key={stat.label} className="bg-paper-warm border border-border rounded-lg p-2.5">
               <div className={`font-mono text-[22px] font-bold ${stat.color}`}>{stat.value}</div>

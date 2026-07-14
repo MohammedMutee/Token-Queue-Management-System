@@ -55,7 +55,7 @@ async function main() {
       where: { id: i + 1 },
       update: {},
       create: {
-        name: `Cabin ${String(i + 1).padStart(2, "0")}`,
+        name: `Counter ${String(i + 1).padStart(2, "0")}`,
         levelId: level1.id,
         operatorId: user.id,
         isActive: true,
@@ -84,7 +84,7 @@ async function main() {
       where: { id: i + 11 },
       update: {},
       create: {
-        name: `Cabin ${String(i + 1).padStart(2, "0")}`,
+        name: `Counter ${String(i + 1).padStart(2, "0")}`,
         levelId: level2.id,
         operatorId: user.id,
         isActive: true,
@@ -92,7 +92,7 @@ async function main() {
     });
   }
 
-  console.log("Seed completed: 2 levels, 20 cabins, 22 users");
+  console.log("Seed completed: 2 levels, 20 counters, 22 users");
 }
 
 main()
