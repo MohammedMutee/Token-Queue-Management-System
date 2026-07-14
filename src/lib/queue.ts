@@ -7,7 +7,7 @@ export async function getNextTokenForCabin(cabinId: number) {
     where: { id: cabinId },
     include: { level: true },
   });
-  if (!cabin) throw new Error("Cabin not found");
+  if (!cabin) throw new Error("Counter not found");
 
   const levelOrder = cabin.level.order;
   const strategy = cabin.level.queueSortStrategy;
@@ -87,7 +87,7 @@ export async function callSpecificToken(cabinId: number, tokenId: number) {
     where: { id: cabinId },
     include: { level: true },
   });
-  if (!cabin) throw new Error("Cabin not found");
+  if (!cabin) throw new Error("Counter not found");
 
   const levelOrder = cabin.level.order;
 

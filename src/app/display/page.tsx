@@ -60,11 +60,11 @@ export default function DisplayPage() {
     });
     const unsub2 = on("token:called", (payload: unknown) => {
       const p = payload as { tokenNumber: string; cabinName: string; level: number };
-      announcementRef.current = `${p.tokenNumber}, please proceed to Level ${p.level}, Cabin ${p.cabinName}`;
+      announcementRef.current = `${p.tokenNumber}, please proceed to Level ${p.level}, Counter ${p.cabinName}`;
       // Trigger TTS
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(
-          `Token ${p.tokenNumber}, please proceed to Level ${p.level}, Cabin ${p.cabinName}`
+          `Token ${p.tokenNumber}, please proceed to Level ${p.level}, Counter ${p.cabinName}`
         );
         utterance.rate = 0.9;
         utterance.pitch = 1;
@@ -197,7 +197,7 @@ function LevelColumn({
             >
               <span className="font-mono text-2xl font-semibold text-dark">{token.displayNumber}</span>
               <div className="flex items-center gap-2.5">
-                <span className="text-[13px] text-muted">Cabin</span>
+                <span className="text-[13px] text-muted">Counter</span>
                 <span className={`font-mono text-[22px] font-bold ${token.state === "CALLED" ? "text-amber" : "text-teal"}`}>
                   {token.cabinName}
                 </span>
