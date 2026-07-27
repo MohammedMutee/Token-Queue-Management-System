@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { Prisma } from "@prisma/client";
 import { emitTokenUpdate } from "./socket-server";
+import { getOrCreateTodaySession } from "./session";
 
 export async function getNextTokenForCabin(cabinId: number) {
   const cabin = await prisma.cabin.findUnique({
@@ -11,20 +12,35 @@ export async function getNextTokenForCabin(cabinId: number) {
 
   const levelOrder = cabin.level.order;
   const strategy = cabin.level.queueSortStrategy;
+  // Only ever operate on the CURRENT day's session. Without this the queue
+  // would pull WAITING tokens left over from previous sessions, which then
+  // don't render in the session-scoped operator view ("can't call any").
+  const session = await getOrCreateTodaySession();
 
-  // Use a transaction with row-level locking to prevent double-assignment
   return prisma.$transaction(async (tx) => {
+    // If this counter already has an active token, resume it instead of
+    // pulling a new one. This prevents "orphan" tokens (multiple CALLED /
+    // IN_PROGRESS tokens stuck on the same counter) when the UI is refreshed
+    // mid-flow and the operator presses "Call Next" again.
+    const active = await tx.token.findFirst({
+      where: {
+        sessionId: session.id,
+        currentCabinId: cabinId,
+        currentState: { in: ["CALLED", "IN_PROGRESS"] },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (active) return active;
+
     // Priority 1: Reactivated tokens (always by token number)
     let token = await tx.token.findFirst({
       where: {
+        sessionId: session.id,
         currentState: "WAITING",
         currentLevel: levelOrder,
         priority: { gt: 0 },
-        // Only tokens with same-cabin routing to this cabin
-        OR: [
-          { currentCabinId: cabinId },
-          { currentCabinId: null, priority: { gt: 0 } },
-        ],
+        // Same-counter routing to this counter, or unrouted priority tokens
+        OR: [{ currentCabinId: cabinId }, { currentCabinId: null }],
       },
       orderBy: [{ priority: "desc" }, { tokenNumber: "asc" }],
     });
@@ -38,6 +54,7 @@ export async function getNextTokenForCabin(cabinId: number) {
 
       token = await tx.token.findFirst({
         where: {
+          sessionId: session.id,
           currentState: "WAITING",
           currentLevel: levelOrder,
           priority: 0,
@@ -49,14 +66,16 @@ export async function getNextTokenForCabin(cabinId: number) {
 
     if (!token) return null;
 
-    // Assign token to this cabin
-    const updated = await tx.token.update({
-      where: { id: token.id },
-      data: {
-        currentState: "CALLED",
-        currentCabinId: cabinId,
-      },
+    // Atomically claim the token: only succeeds if it is STILL WAITING.
+    // This is the real lock — a concurrent counter that already claimed it
+    // will have flipped currentState, so our updateMany matches 0 rows.
+    const claim = await tx.token.updateMany({
+      where: { id: token.id, currentState: "WAITING" },
+      data: { currentState: "CALLED", currentCabinId: cabinId },
     });
+    if (claim.count === 0) return null; // someone else grabbed it first
+
+    const updated = await tx.token.findUniqueOrThrow({ where: { id: token.id } });
 
     await tx.tokenEvent.create({
       data: {
@@ -90,13 +109,28 @@ export async function callSpecificToken(cabinId: number, tokenId: number) {
   if (!cabin) throw new Error("Counter not found");
 
   const levelOrder = cabin.level.order;
+  const session = await getOrCreateTodaySession();
 
   return prisma.$transaction(async (tx) => {
-    const token = await tx.token.findUnique({
-      where: { id: tokenId },
+    // Refuse if this counter is already serving a different token — otherwise
+    // we'd orphan the current one.
+    const active = await tx.token.findFirst({
+      where: {
+        sessionId: session.id,
+        currentCabinId: cabinId,
+        currentState: { in: ["CALLED", "IN_PROGRESS"] },
+      },
     });
+    if (active && active.id !== tokenId) return null;
 
-    if (!token || token.currentState !== "WAITING" || token.currentLevel !== levelOrder) {
+    const token = await tx.token.findUnique({ where: { id: tokenId } });
+
+    if (
+      !token ||
+      token.sessionId !== session.id ||
+      token.currentState !== "WAITING" ||
+      token.currentLevel !== levelOrder
+    ) {
       return null;
     }
 
@@ -104,13 +138,14 @@ export async function callSpecificToken(cabinId: number, tokenId: number) {
       return null;
     }
 
-    const updated = await tx.token.update({
-      where: { id: token.id },
-      data: {
-        currentState: "CALLED",
-        currentCabinId: cabinId,
-      },
+    // Atomic claim — guard on WAITING so two operators can't grab the same one.
+    const claim = await tx.token.updateMany({
+      where: { id: token.id, currentState: "WAITING" },
+      data: { currentState: "CALLED", currentCabinId: cabinId },
     });
+    if (claim.count === 0) return null;
+
+    const updated = await tx.token.findUniqueOrThrow({ where: { id: token.id } });
 
     await tx.tokenEvent.create({
       data: {
@@ -138,8 +173,10 @@ export async function callSpecificToken(cabinId: number, tokenId: number) {
 }
 
 export async function getQueueDepth(levelOrder: number) {
+  const session = await getOrCreateTodaySession();
   return prisma.token.count({
     where: {
+      sessionId: session.id,
       currentState: "WAITING",
       currentLevel: levelOrder,
     },

@@ -10,14 +10,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const session = await getOrCreateTodaySession();
 
-  const nextNo = session.lastTokenNo + 1;
-  const displayNumber = `T-${String(nextNo).padStart(3, "0")}`;
-
   const token = await prisma.$transaction(async (tx) => {
-    await tx.session.update({
+    // Atomically increment inside the transaction so two simultaneous
+    // "Issue Token" clicks can never compute the same number (which would
+    // otherwise hit the unique constraint and throw a 500).
+    const updatedSession = await tx.session.update({
       where: { id: session.id },
-      data: { lastTokenNo: nextNo },
+      data: { lastTokenNo: { increment: 1 } },
     });
+    const nextNo = updatedSession.lastTokenNo;
+    const displayNumber = `T-${String(nextNo).padStart(3, "0")}`;
 
     const created = await tx.token.create({
       data: {
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
         sessionId: session.id,
         currentState: "WAITING",
         currentLevel: 1,
-        tokenNumber: { lte: nextNo },
+        tokenNumber: { lte: token.tokenNumber },
       },
     }),
     prisma.level.findFirst({ where: { order: 1 } }),
