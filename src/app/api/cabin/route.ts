@@ -18,13 +18,16 @@ export async function GET(req: NextRequest) {
 
   const session = await getOrCreateTodaySession();
 
-  // Find currently assigned token (CALLED or IN_PROGRESS)
+  // Find currently assigned token (CALLED or IN_PROGRESS).
+  // Order deterministically so the operator always sees the most recently
+  // assigned token — never an arbitrary/stale one if orphans exist.
   const currentToken = await prisma.token.findFirst({
     where: {
       sessionId: session.id,
       currentCabinId: cabinId,
       currentState: { in: ["CALLED", "IN_PROGRESS"] },
     },
+    orderBy: { updatedAt: "desc" },
   });
 
   const queueDepth = await getQueueDepth(cabin.level.order);

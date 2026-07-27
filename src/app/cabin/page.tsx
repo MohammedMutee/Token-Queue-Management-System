@@ -59,7 +59,17 @@ export default function CabinPage() {
   const [showQueue, setShowQueue] = useState(false);
   const [callingTokenId, setCallingTokenId] = useState<number | null>(null);
   const [fetchError, setFetchError] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const prevStepRef = useRef<CabinStep>("idle");
+
+  async function readError(res: Response, fallback: string): Promise<string> {
+    try {
+      const data = await res.json();
+      return typeof data?.error === "string" ? data.error : fallback;
+    } catch {
+      return fallback;
+    }
+  }
 
   const isProcessing = step !== "idle" && step !== "success" && step !== "nav-confirm";
 
@@ -71,16 +81,27 @@ export default function CabinPage() {
         const data = await res.json();
         setInfo(data);
         setFetchError(false);
-        if (!data.currentToken && step === "idle") {
-          setStep("idle");
-        }
+        // Reconcile the workflow step with the token's ACTUAL server state.
+        // This is what makes a page refresh (or any desync) recover correctly:
+        // the step is derived from the token, not remembered only in the browser.
+        setStep((prev) => {
+          // Preserve purely-local transient states (mid-interaction / animations).
+          if (prev === "success" || prev === "nav-confirm") return prev;
+          const state = data.currentToken?.state ?? null;
+          if (!state) return "idle";
+          // Keep an in-progress interaction on the same token.
+          if (prev === "confirm" || prev === "hold-reason") return prev;
+          if (state === "CALLED") return "step1";
+          if (state === "IN_PROGRESS") return "step2";
+          return prev;
+        });
       } else {
         setFetchError(true);
       }
     } catch {
       setFetchError(true);
     }
-  }, [cabinId, step]);
+  }, [cabinId]);
 
   const fetchQueue = useCallback(async () => {
     if (busyRef.current) return;
@@ -122,6 +143,13 @@ export default function CabinPage() {
     const interval = setInterval(() => setProcessingTimer((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [step]);
+
+  // Auto-dismiss the action-error banner
+  useEffect(() => {
+    if (!actionError) return;
+    const t = setTimeout(() => setActionError(null), 5000);
+    return () => clearTimeout(t);
+  }, [actionError]);
 
   // Warn before closing tab mid-process
   useEffect(() => {
@@ -176,6 +204,7 @@ export default function CabinPage() {
 
   async function callNext() {
     setLoading(true);
+    setActionError(null);
     try {
       const res = await fetch("/api/cabin/call-next", {
         method: "POST",
@@ -186,6 +215,9 @@ export default function CabinPage() {
         setShowQueue(false);
         await fetchInfo();
         setStep("step1");
+      } else {
+        await fetchInfo();
+        await fetchQueue();
       }
     } finally {
       setLoading(false);
@@ -194,6 +226,7 @@ export default function CabinPage() {
 
   async function callSpecific(tokenId: number) {
     setCallingTokenId(tokenId);
+    setActionError(null);
     try {
       const res = await fetch(`/api/cabin/call-specific/${tokenId}`, {
         method: "POST",
@@ -205,6 +238,8 @@ export default function CabinPage() {
         await fetchInfo();
         setStep("step1");
       } else {
+        setActionError(await readError(res, "That token is no longer available"));
+        await fetchInfo();
         await fetchQueue();
       }
     } finally {
@@ -216,6 +251,7 @@ export default function CabinPage() {
     const tokenId = info?.currentToken?.id;
     if (!tokenId) return;
     setLoading(true);
+    setActionError(null);
     try {
       const res = await fetch(`/api/cabin/arrive/${tokenId}`, {
         method: "POST",
@@ -225,6 +261,9 @@ export default function CabinPage() {
       if (res.ok) {
         setStep("step2");
         setProcessingTimer(0);
+        await fetchInfo();
+      } else {
+        setActionError(await readError(res, "Could not mark arrived — refreshing to latest"));
         await fetchInfo();
       }
     } finally {
@@ -273,7 +312,13 @@ export default function CabinPage() {
           busyRef.current = false;
         }, 2500);
       } else {
+        // Action rejected by the server (e.g. token state changed under us).
+        // Clear the busy lock, show why, and resync the UI to the truth.
         busyRef.current = false;
+        setConfirmAction(null);
+        setActionError(await readError(res, "Action failed — screen refreshed to latest"));
+        await fetchInfo();
+        await fetchQueue();
       }
     } finally {
       setLoading(false);
@@ -314,6 +359,20 @@ export default function CabinPage() {
       {fetchError && !connected && (
         <div className="bg-red-bg border-b border-red-border px-4 py-2 text-center text-xs font-semibold text-red animate-pulse">
           Connection lost — retrying...
+        </div>
+      )}
+
+      {/* Action error banner — a rejected action now explains itself instead of silently doing nothing */}
+      {actionError && (
+        <div className="bg-amber-bg border-b border-amber-border px-4 py-2 flex items-center justify-between gap-3">
+          <span className="text-xs font-semibold text-amber">{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-amber hover:text-dark text-lg leading-none shrink-0"
+            aria-label="Dismiss"
+          >
+            &times;
+          </button>
         </div>
       )}
 
