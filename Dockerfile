@@ -51,9 +51,11 @@ COPY server.ts next.config.ts tsconfig.json ./
 # Copy source (Next.js App Router needs these at runtime)
 COPY --from=builder /app/src ./src
 
-# Copy and prepare entrypoint
+# Copy and prepare entrypoint. Strip any CRLF line endings first: if the repo
+# was cloned on Windows the script may carry \r, which makes the kernel look
+# for "/bin/sh\r" and fail with "no such file or directory".
 COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
 EXPOSE 3000
 

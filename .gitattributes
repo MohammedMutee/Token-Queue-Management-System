@@ -1,0 +1,12 @@
+# Normalize line endings across operating systems.
+# Without this, cloning on Windows (git core.autocrlf=true) rewrites shell
+# scripts to CRLF, which breaks the Docker entrypoint at runtime:
+#   exec ./docker-entrypoint.sh: no such file or directory
+# (the kernel tries to run "/bin/sh\r" from the shebang line).
+
+# Default: let git normalize text files, checking out with native EOL.
+* text=auto
+
+# Shell scripts MUST always be LF, even when checked out on Windows.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
