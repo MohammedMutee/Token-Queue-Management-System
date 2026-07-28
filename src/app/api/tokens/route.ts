@@ -120,24 +120,26 @@ export async function GET(req: NextRequest) {
     const nextNo = session.lastTokenNo + 1;
     const nextToken = `T-${String(nextNo).padStart(3, "0")}`;
 
-    const [issued, waiting, completed, hold, noShow, activeCabins, recent, holdTokens] = await Promise.all([
+    const [issued, waiting, completed, hold, noShow, activeCabins, recent, reactivatable] = await Promise.all([
       prisma.token.count({ where: { sessionId: session.id } }),
       prisma.token.count({ where: { sessionId: session.id, currentState: "WAITING" } }),
       prisma.token.count({ where: { sessionId: session.id, currentState: "COMPLETED" } }),
       prisma.token.count({ where: { sessionId: session.id, currentState: "HOLD" } }),
       prisma.token.count({ where: { sessionId: session.id, currentState: "NO_SHOW" } }),
       prisma.cabin.count({ where: { isActive: true } }),
+      // All of today's tokens (not just the latest 10), newest first.
       prisma.token.findMany({
         where: { sessionId: session.id },
         orderBy: { createdAt: "desc" },
-        take: 10,
       }),
+      // Tokens that can be reactivated: on HOLD, or DEACTIVATED by a no-show.
+      // Most-recent event gives the reason (hold note / "No-show — deactivated")
+      // and the counter it was last at.
       prisma.token.findMany({
-        where: { sessionId: session.id, currentState: "HOLD" },
-        orderBy: { tokenNumber: "asc" },
+        where: { sessionId: session.id, currentState: { in: ["HOLD", "DEACTIVATED"] } },
+        orderBy: { updatedAt: "desc" },
         include: {
           events: {
-            where: { toState: "HOLD" },
             orderBy: { createdAt: "desc" },
             take: 1,
             include: { cabin: { include: { operator: true } } },
@@ -150,13 +152,14 @@ export async function GET(req: NextRequest) {
       nextToken,
       summary: { issued, waiting, completed, hold, noShow, activeCabins },
       recent,
-      holdTokens: holdTokens.map((t) => ({
+      reactivatableTokens: reactivatable.map((t) => ({
         id: t.id,
         displayNumber: t.displayNumber,
         currentLevel: t.currentLevel,
+        currentState: t.currentState,
         cabinName: t.events[0]?.cabin?.name ?? null,
         operatorName: t.events[0]?.cabin?.operator?.name ?? null,
-        holdReason: t.events[0]?.remarks ?? null,
+        reason: t.events[0]?.remarks ?? null,
       })),
     });
   }

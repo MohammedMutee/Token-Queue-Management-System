@@ -33,13 +33,14 @@ interface RecentToken {
   metadata: { name?: string } | null;
 }
 
-interface HoldToken {
+interface ReactivatableToken {
   id: number;
   displayNumber: string;
   currentLevel: number;
+  currentState: string;
   cabinName: string | null;
   operatorName: string | null;
-  holdReason: string | null;
+  reason: string | null;
 }
 
 interface SearchResult {
@@ -76,7 +77,7 @@ export default function ReceptionPage() {
 
   const [summary, setSummary] = useState<TokenSummary>({ issued: 0, waiting: 0, completed: 0, hold: 0, noShow: 0, activeCabins: 0 });
   const [recentTokens, setRecentTokens] = useState<RecentToken[]>([]);
-  const [holdTokens, setHoldTokens] = useState<HoldToken[]>([]);
+  const [reactivatableTokens, setReactivatableTokens] = useState<ReactivatableToken[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -86,7 +87,7 @@ export default function ReceptionPage() {
         setNextToken(data.nextToken ?? "T-001");
         setSummary(data.summary ?? summary);
         setRecentTokens(data.recent ?? []);
-        setHoldTokens(data.holdTokens ?? []);
+        setReactivatableTokens(data.reactivatableTokens ?? []);
       }
     } catch { /* retry next interval */ }
   }, []);
@@ -604,16 +605,21 @@ export default function ReceptionPage() {
               </div>
             )}
 
-            {/* Hold tokens quick list */}
-            {holdTokens.length > 0 && !searchResult && (
+            {/* Reactivatable tokens quick list (on hold + deactivated no-shows) */}
+            {reactivatableTokens.length > 0 && !searchResult && (
               <div className="mt-4">
-                <div className="text-[11px] font-bold tracking-[0.1em] text-muted-light mb-2">TOKENS ON HOLD</div>
-                <div className="flex flex-col gap-2">
-                  {holdTokens.slice(0, 3).map((t) => (
+                <div className="text-[11px] font-bold tracking-[0.1em] text-muted-light mb-2">AWAITING REACTIVATION</div>
+                <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
+                  {reactivatableTokens.map((t) => (
                     <div key={t.id} className="flex items-center justify-between bg-amber-bg/50 border border-amber-border/50 rounded-lg px-3 py-2">
-                      <div>
-                        <span className="font-mono text-sm font-semibold text-dark">{t.displayNumber}</span>
-                        {t.holdReason && <span className="text-xs text-muted ml-2">{t.holdReason}</span>}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-semibold text-dark">{t.displayNumber}</span>
+                          <span className={`text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded ${stateBadge(t.currentState)}`}>
+                            {t.currentState}
+                          </span>
+                        </div>
+                        {t.reason && <span className="text-xs text-muted block truncate">{t.reason}</span>}
                       </div>
                       <button
                         onClick={() => {
@@ -621,15 +627,15 @@ export default function ReceptionPage() {
                           setSearchResult({
                             id: t.id,
                             displayNumber: t.displayNumber,
-                            currentState: "HOLD",
+                            currentState: t.currentState,
                             currentLevel: t.currentLevel,
                             cabinName: t.cabinName,
                             operatorName: t.operatorName,
-                            holdReason: t.holdReason,
+                            holdReason: t.reason,
                             createdAt: "",
                           });
                         }}
-                        className="text-xs font-bold text-teal hover:underline"
+                        className="text-xs font-bold text-teal hover:underline shrink-0 ml-2"
                       >
                         Reactivate
                       </button>
@@ -658,14 +664,15 @@ export default function ReceptionPage() {
           ))}
         </div>
 
-        {/* Recent Tokens Table */}
+        {/* All Tokens Table */}
         <div className="bg-paper-warm border border-border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <span className="text-[11px] font-bold tracking-[0.1em] text-muted-light">RECENT TOKENS</span>
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-[0.1em] text-muted-light">ALL TOKENS</span>
+            <span className="text-[11px] font-mono text-muted-light">{recentTokens.length}</span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[60vh]">
           <table className="w-full text-sm min-w-[480px]">
-            <thead>
+            <thead className="sticky top-0 bg-paper-warm z-10">
               <tr className="border-b border-border text-xs text-muted-light">
                 <th className="text-left px-4 py-2 font-semibold">Token</th>
                 <th className="text-left px-4 py-2 font-semibold">Name</th>
