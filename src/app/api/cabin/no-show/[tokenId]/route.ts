@@ -16,26 +16,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     return NextResponse.json({ error: "Token not in valid state" }, { status: 400 });
   }
 
-  const newState = token.noShowCount === 0 ? "WAITING" : "DEACTIVATED";
+  // No-show deactivates the token immediately — the person did not turn up, so
+  // the token is removed from the queue (not re-queued).
+  const nextNoShowCount = token.noShowCount + 1;
+  const newState = "DEACTIVATED";
 
   await prisma.$transaction(async (tx) => {
-    if (token.noShowCount === 0) {
-      await tx.token.update({
-        where: { id: tokenId },
-        data: { currentState: "WAITING", currentCabinId: null, noShowCount: 1 },
-      });
-      await tx.tokenEvent.create({
-        data: { tokenId, fromState: token.currentState, toState: "WAITING", level: token.currentLevel, cabinId, remarks: "No-show (1st) — re-queued", createdBy: userId },
-      });
-    } else {
-      await tx.token.update({
-        where: { id: tokenId },
-        data: { currentState: "DEACTIVATED", currentCabinId: null, noShowCount: token.noShowCount + 1 },
-      });
-      await tx.tokenEvent.create({
-        data: { tokenId, fromState: token.currentState, toState: "DEACTIVATED", level: token.currentLevel, cabinId, remarks: "No-show (2nd) — deactivated", createdBy: userId },
-      });
-    }
+    await tx.token.update({
+      where: { id: tokenId },
+      data: { currentState: "DEACTIVATED", currentCabinId: null, noShowCount: nextNoShowCount },
+    });
+    await tx.tokenEvent.create({
+      data: {
+        tokenId,
+        fromState: token.currentState,
+        toState: "DEACTIVATED",
+        level: token.currentLevel,
+        cabinId,
+        remarks: "No-show — deactivated",
+        createdBy: userId,
+      },
+    });
   });
 
   emitTokenUpdate({
