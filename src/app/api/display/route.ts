@@ -73,7 +73,7 @@ export async function GET() {
   });
 
   const announcement = lastCalled
-    ? `${lastCalled.token.displayNumber}, please proceed to Level ${lastCalled.cabin?.level?.order ?? "?"}, Counter ${lastCalled.cabin?.name?.replace(/\D/g, "").padStart(2, "0") ?? "?"}`
+    ? `${lastCalled.token.displayNumber}, please proceed to ${lastCalled.cabin?.name ?? "?"}`
     : null;
 
   return NextResponse.json({
