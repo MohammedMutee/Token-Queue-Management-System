@@ -60,11 +60,11 @@ export default function DisplayPage() {
     });
     const unsub2 = on("token:called", (payload: unknown) => {
       const p = payload as { tokenNumber: string; cabinName: string; level: number };
-      announcementRef.current = `${p.tokenNumber}, please proceed to Level ${p.level}, Counter ${p.cabinName}`;
+      announcementRef.current = `${p.tokenNumber}, please proceed to ${p.cabinName}`;
       // Trigger TTS
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(
-          `Token ${p.tokenNumber}, please proceed to Level ${p.level}, Counter ${p.cabinName}`
+          `Token ${p.tokenNumber}, please proceed to ${p.cabinName}`
         );
         utterance.rate = 0.9;
         utterance.pitch = 1;
